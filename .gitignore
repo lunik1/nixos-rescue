@@ -1,0 +1,7 @@
+result*
+.pre-commit-config.yaml
+*.iso
+*.img
+*.img.zst
+*.tar.xz
+.direnv/
