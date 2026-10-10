@@ -1,6 +1,6 @@
 # nixos-rescue
 
-GRML-y NixOS recovery and maintenance images.
+Grml-y NixOS recovery and maintenance images.
 
 ## Build
 
