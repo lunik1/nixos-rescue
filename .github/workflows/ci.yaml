@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Flake check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - run: nix flake check -L
+
+  build:
+    permissions:
+      contents: read
+      actions: write
+    uses: ./.github/workflows/build.yaml
+    with:
+      purge-cache: ${{ github.event_name != 'pull_request' }}
+    secrets:
+      token: ${{ secrets.GITHUB_TOKEN }}

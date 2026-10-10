@@ -1,0 +1,65 @@
+name: Build images
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: "Git ref to check out (defaults to the caller's ref)"
+        required: false
+        type: string
+        default: ""
+      upload-to-release:
+        description: "Release tag to upload the built images to"
+        required: false
+        type: string
+        default: ""
+      purge-cache:
+        description: "Purge stale Nix store caches after the run"
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      token:
+        required: true
+
+jobs:
+  build:
+    name: Build (${{ matrix.system }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            system: x86_64-linux
+          - runner: ubuntu-24.04-arm
+            system: aarch64-linux
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.token }}
+
+      - name: Restore/save Nix store
+        uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-v1-${{ matrix.system }}-${{ hashFiles('flake.lock') }}
+          restore-prefixes-first-match: nix-v1-${{ matrix.system }}-
+          purge: ${{ inputs.purge-cache }}
+          purge-prefixes: nix-v1-${{ matrix.system }}-
+          purge-created: 0
+          purge-last-accessed: P7D
+          purge-primary-key: never
+          gc-max-store-size-linux: 5G
+
+      - name: Build images
+        run: ./.github/scripts/build-images.sh "${{ matrix.system }}"
+
+      - name: Upload assets to draft release
+        if: inputs.upload-to-release != ''
+        env:
+          GH_TOKEN: ${{ secrets.token }}
+        run: ./.github/scripts/upload-release-assets.sh "${{ matrix.system }}" "${{ inputs.upload-to-release }}"

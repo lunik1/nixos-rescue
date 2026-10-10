@@ -19,6 +19,29 @@
     { flakelight, ... }:
     flakelight ./. (
       { lib, ... }:
+      let
+        preCommit =
+          pkgs:
+          pkgs.inputs'.pre-commit-hooks.lib.run {
+            src = ./.;
+            hooks = {
+              actionlint.enable = true;
+              nixfmt.enable = true;
+              shellcheck = {
+                enable = true;
+                excludes = [
+                  ".envrc"
+                ];
+              };
+              shfmt.enable = true;
+              statix.enable = true;
+              yamlfmt = {
+                enable = true;
+                settings.configPath = ".yamlfmt";
+              };
+            };
+          };
+      in
       {
         systems = [
           "x86_64-linux"
@@ -31,28 +54,24 @@
         # the shared rescue system, reusable from other flakes
         nixosModules.rescue = ./nix/modules;
 
-        checks = {
-          pre-commit-check =
-            pkgs:
-            pkgs.inputs'.pre-commit-hooks.lib.run {
-              src = ./.;
-              hooks = {
-                nixfmt.enable = true;
-                shellcheck = {
-                  enable = true;
-                  excludes = [
-                    ".envrc"
-                    ".zshrc"
-                  ];
-                };
-                statix.enable = true;
-              };
-            };
-        };
+        checks.pre-commit-check = preCommit;
+
+        devShell =
+          pkgs:
+          let
+            cfg = preCommit pkgs;
+          in
+          {
+            packages = cfg.enabledPackages;
+            inherit (cfg) shellHook;
+          };
 
         formatters =
           pkgs: with pkgs; {
             "*.nix" = "${nixfmt}/bin/nixfmt";
+            "*.sh" = "${shfmt}/bin/shfmt -w -s";
+            "*.yaml" = "${yamlfmt}/bin/yamlfmt";
+            "*.yml" = "${yamlfmt}/bin/yamlfmt";
           };
 
         outputs =

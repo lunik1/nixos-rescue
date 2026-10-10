@@ -1,0 +1,76 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  schedule:
+    # 06:00 UTC on the first day of each month
+    - cron: "0 6 1 * *"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (default: vYYYY.MM for the current month)"
+        required: false
+        type: string
+      update-lock:
+        description: "Update flake.lock before tagging (only when creating a new tag)"
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    name: Prepare  release
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.prepare.outputs.tag }}
+      skip: ${{ steps.prepare.outputs.skip }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create release tag and draft release
+        id: prepare
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+          UPDATE_LOCK: ${{ github.event_name == 'schedule' || inputs.update-lock }}
+        run: ./.github/scripts/prepare-release.sh
+
+  build:
+    needs: prepare
+    if: needs.prepare.outputs.skip != 'true'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/build.yaml
+    with:
+      ref: ${{ needs.prepare.outputs.tag }}
+      upload-to-release: ${{ needs.prepare.outputs.tag }}
+    secrets:
+      token: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    name: Publish release
+    needs: [prepare, build]
+    if: needs.prepare.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: gh release edit "$TAG" --draft=false
