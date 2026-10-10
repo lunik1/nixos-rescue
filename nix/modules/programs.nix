@@ -13,7 +13,6 @@
     less.enable = true;
     mtr.enable = true;
     tcpdump.enable = true;
-    wireshark.enable = true;
 
     tmux = {
       enable = true;
@@ -21,6 +20,10 @@
       newSession = true;
     };
 
+    wireshark = {
+      enable = true;
+      usbmon = true;
+    };
 
     nano = {
       enable = true;
