@@ -20,6 +20,7 @@
   services.getty = {
     autologinUser = lib.mkForce "root";
     helpLine = lib.mkForce ''
+
       88888b   d888b  888b  88 8P 888888    88888b    888     888b  88 88  d888b 88
       88   88 88   88 88`8b 88 "    88      88   88  88 88    88`8b 88 88 88   ` 88
       88   88 88   88 88 88 88      88      88888P  88   88   88 88 88 88 88     88
