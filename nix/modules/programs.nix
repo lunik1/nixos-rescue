@@ -22,7 +22,7 @@
 
     wireshark = {
       enable = true;
-      usbmon = true;
+      usbmon.enable = true;
     };
 
     nano = {
