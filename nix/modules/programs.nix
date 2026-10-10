@@ -12,7 +12,6 @@
     iftop.enable = true;
     less.enable = true;
     mtr.enable = true;
-    screen.enable = true;
     tcpdump.enable = true;
     tmux.enable = true;
     wireshark.enable = true;
